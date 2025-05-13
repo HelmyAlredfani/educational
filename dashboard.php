@@ -2,31 +2,30 @@
 require_once '../functions.php'; // المسار النسبي لملف الدوال
 require_once '../DB_new.php';    // المسار النسبي لملف الاتصال بقاعدة البيانات
 
-require_role(["school_admin"], '../'); // تحديد الأدوار المسموح لها بالوصول لهذه الصفحة
+require_role(["teacher"], '../'); // تحديد الأدوار المسموح لها بالوصول لهذه الصفحة
 
-// التأكد من أن مدير المدرسة مرتبط بمدرسة
+// التأكد من أن المعلم مرتبط بمدرسة
 if (empty($_SESSION['school_id'])) {
-    // هذا يجب ألا يحدث إذا كان تسجيل الدخول والبيانات صحيحة
-    error_log("School admin user {$_SESSION['user_id']} has no school_id.");
-    logout_user('../'); // تسجيل الخروج كإجراء أمان
+    error_log("Teacher user {$_SESSION['user_id']} has no school_id.");
+    logout_user('../');
     exit;
 }
 
 $school_id = $_SESSION['school_id'];
-$page_title = "لوحة تحكم مدير المدرسة";
+$teacher_id = $_SESSION['user_id'];
+$page_title = "لوحة تحكم المعلم";
 
-// جلب اسم المدرسة لعرضه
+// جلب اسم المدرسة لعرضه (اختياري، لكن جيد للتجربة)
 $school_name = "مدرستي"; // قيمة افتراضية
 try {
-    $stmt = $pdo->prepare("SELECT name FROM schools WHERE id = ?");
-    $stmt->execute([$school_id]);
-    $school = $stmt->fetch();
+    $stmt_school = $pdo->prepare("SELECT name FROM schools WHERE id = ?");
+    $stmt_school->execute([$school_id]);
+    $school = $stmt_school->fetch();
     if ($school) {
         $school_name = $school['name'];
     }
 } catch (PDOException $e) {
-    error_log("Error fetching school name: " . $e->getMessage());
-    // يمكن ترك الاسم الافتراضي أو عرض رسالة خطأ بسيطة
+    error_log("Error fetching school name for teacher dashboard: " . $e->getMessage());
 }
 
 ?>
@@ -35,7 +34,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo esc_html($page_title); ?> - <?php echo esc_html($school_name); ?> - نظام الردفاني</title>
+    <title><?php echo esc_html($page_title); ?> - <?php echo esc_html($_SESSION['full_name']); ?> - نظام الردفاني</title>
     <link rel="stylesheet" href="../styles.css"> <!- المسار إلى ملف الأنماط الرئيسي ->
     <style>
         /* يمكن إضافة أنماط خاصة بهذه الصفحة هنا */
@@ -55,21 +54,21 @@ try {
         .dashboard-menu ul li a {
             display: block;
             padding: 10px 15px;
-            background-color: #28a745; /* لون مختلف لمدير المدرسة */
+            background-color: #17a2b8; /* لون مختلف للمعلم */
             color: white;
             text-decoration: none;
             border-radius: 5px;
             transition: background-color 0.3s ease;
         }
         .dashboard-menu ul li a:hover {
-            background-color: #218838;
+            background-color: #138496;
         }
         .welcome-message {
             margin-bottom: 20px;
             font-size: 1.2em;
         }
-         .school-name-header {
-            font-size: 1.5em;
+        .info-header {
+            font-size: 1.1em;
             color: #555;
             margin-bottom: 15px;
         }
@@ -80,30 +79,27 @@ try {
         <header style="display: flex; justify-content: space-between; align-items: center; padding-bottom:10px; border-bottom: 1px solid #ccc;">
             <div>
                 <h1><?php echo esc_html($page_title); ?></h1>
-                <div class="school-name-header">مدرسة: <?php echo esc_html($school_name); ?></div>
+                <div class="info-header">المعلم: <?php echo esc_html($_SESSION['full_name']); ?> | المدرسة: <?php echo esc_html($school_name); ?></div>
             </div>
             <div>
-                <span style="margin-left: 15px;">مرحباً, <?php echo esc_html($_SESSION["full_name"]); ?>!</span>
                 <a href="../logout_new.php" class="button-logout" style="text-decoration:none; color:white; background-color: #dc3545; padding: 8px 12px; border-radius:4px;">تسجيل الخروج</a>
             </div>
         </header>
         
-        <p class="welcome-message">أهلاً بك في لوحة تحكم مدير المدرسة. من هنا يمكنك إدارة شؤون مدرستك.</p>
+        <p class="welcome-message">أهلاً بك في لوحة تحكم المعلم. من هنا يمكنك إدارة المواد والطلاب والدرجات الخاصة بك.</p>
 
         <nav class="dashboard-menu">
             <ul>
-                <li><a href="manage_teachers.php">إدارة المعلمين</a></li>
-                <li><a href="manage_students.php">إدارة الطلاب</a></li>
-                <li><a href="manage_classes.php">إدارة الصفوف الدراسية</a></li>
-                <li><a href="manage_class_subjects.php">إدارة مواد الصفوف وتعيين المعلمين</a></li>
-                <li><a href="view_school_reports.php">عرض تقارير المدرسة (قيد الإنشاء)</a></li>
-                <li><a href="school_settings.php">إعدادات المدرسة (قيد الإنشاء)</a></li>
+                <li><a href="manage_my_subjects_classes.php">إدارة المواد والصفوف المسندة لي (قيد الإنشاء)</a></li>
+                <li><a href="enter_grades.php">إدخال/تعديل درجات الطلاب (قيد الإنشاء)</a></li>
+                <li><a href="view_my_student_reports.php">عرض تقارير طلابي (قيد الإنشاء)</a></li>
+                <li><a href="my_profile.php">ملفي الشخصي (قيد الإنشاء)</a></li>
             </ul>
         </nav>
 
         <main>
             <p>يرجى اختيار أحد الخيارات من القائمة أعلاه للبدء.</p>
-            <!- يمكن إضافة محتوى إضافي هنا مثل إحصائيات سريعة خاصة بالمدرسة ->
+            <!- يمكن إضافة محتوى إضافي هنا مثل إشعارات خاصة بالمعلم ->
         </main>
 
         <footer>
